@@ -32,7 +32,8 @@ class VicGPT(nn.Module):
             x = t_block(x)
         x = self.language_head(x) # (batch_size, seq_len, vocab_size) --> logits!
         return x
-        
+
+    @staticmethod 
     def top_p_sampling(logits, top_p):
         # logits.shape --> (batch_size, vocab_size)
         # Sort logits in descending order
@@ -51,6 +52,7 @@ class VicGPT(nn.Module):
         logits_filtered.scatter_(dim=-1, index=sorted_indices, src=sorted_logits)
         return logits_filtered 
 
+    @staticmethod
     def top_k_sampling(logits, top_k):
         # logits.shape --> (batch_size, vocab_size)
         top_k_logits, top_k_indices = torch.topk(logits, top_k, dim=-1)
@@ -59,22 +61,30 @@ class VicGPT(nn.Module):
         logits_filtered.scatter_(dim=-1, index=top_k_indices, src=top_k_logits)
         return logits_filtered
 
-    def generate(self, x, max_new_tokens=200, temperature=1.0, top_p=0.9, top_k=None):
-        # x is list of token ids
+    def generate(self, x, max_new_tokens=200, temperature=1.0, top_p=0.9, top_k=None, eos_token_id=None):
+        # x is list of input token ids
+        # this function autoregressively samples new tokens, and returns the prompt + new output
+        # the tokenizer is used before the function to encode the prompt and after to decode the output
         batch_size, seq_len = x.shape
-        logits = self.forward(x)
-        last_token_logits = logits[:,-1,:]/temperature # (batch_size, vocab_size) last token in sequence used to generate new token
-        if top_k:
-            last_token_logits = top_k_sampling(last_token_logits, top_k)
-        elif top_p:
-            last_token_logits = top_p_sampling(last_token_logits, top_p)
-                
-        next_token_prob_distribution = F.softmax(last_token_logits, dim=-1)
-        next_token_id = torch.multinomial(next_token_prob_distribution, num_samples=1) # (batch_size, 1)
-        # TODO NOW NEED TO DECODE TOKEN ID WITH TOKENIZER 
-        # TODO, NEXT STEP MIGHT BE TO WRITE A TOKENIZER CLASS, MAKE SURE HUGGING FACE TOKENIZER AND OUR OWN HAVE SAME FUNCTIONS SO THEY CAN BOTH BE USED EASILY
-        # keep generating until max new tokens is reached or end of sequence (EOS), need a loop
-        return None
+        assert batch_size == 1, "batch_size for generation should be 1"
+        num_new_tokens = 0
+        # keep generating until max new tokens is reached or end of sequence (EOS)
+        while num_new_tokens < max_new_tokens: 
+            logits = self.forward(x)
+            last_token_logits = logits[:,-1,:]/temperature # (batch_size=1, vocab_size) last token in sequence used to generate new token
+            if top_k:
+                last_token_logits = self.top_k_sampling(last_token_logits, top_k)
+            elif top_p:
+                last_token_logits = self.top_p_sampling(last_token_logits, top_p)         
+            next_token_prob_distribution = F.softmax(last_token_logits, dim=-1)
+            next_token_id = torch.multinomial(next_token_prob_distribution, num_samples=1) # (batch_size=1, 1)
+            # concat next token into the current context
+            x = torch.cat([x, next_token_id], dim=-1)
+            num_new_tokens += 1 
+            if eos_token_id is not None and next_token_id.item() == eos_token_id:
+                break
+        return x
 
-# TODO, COULD IMPLEMENT A GENERATE THAT USES A KV CACHE!
+# TODO, NEXT STEP MIGHT BE TO WRITE A TOKENIZER CLASS, MAKE SURE HUGGING FACE TOKENIZER AND OUR OWN HAVE SAME FUNCTIONS SO THEY CAN BOTH BE USED EASILY
+# TODO, COULD IMPLEMENT A GENERATE func THAT USES A KV CACHE!
 # TODO NEED TO UNIT TEST THE TOP K AND TOP P SAMPLING FUNCTIONS
