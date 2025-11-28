@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from attention import MultiHeadMaskedSelfAttention
+from .attention import MultiHeadMaskedSelfAttention
 
 class TransformerBlock(nn.Module):
     def __init__(self, embed_dim, num_heads, max_seq_len, mlp_hidden_dim, dropout_prob=0.1):

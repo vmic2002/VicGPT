@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformer_block import TransformerBlock
+from .transformer_block import TransformerBlock
 
 class VicGPT(nn.Module):
     def __init__(self, vocab_size, num_layers, embed_dim, num_heads, max_seq_len, mlp_hidden_dim, dropout_prob=0.1):
