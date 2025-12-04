@@ -2,3 +2,5 @@ venv
 data
 __pycache__
 wandb
+models/pre_trained
+models/sft
