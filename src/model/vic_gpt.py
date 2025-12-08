@@ -69,8 +69,12 @@ class VicGPT(nn.Module):
         assert batch_size == 1, "batch_size for generation should be 1"
         num_new_tokens = 0
         # keep generating until max new tokens is reached or end of sequence (EOS)
-        while num_new_tokens < max_new_tokens: 
-            logits = self.forward(x)
+        while num_new_tokens < max_new_tokens:
+            if x.shape[1] > self.max_seq_len:
+                context = x[:, -self.max_seq_len:] # use a sliding window, use last max_seq_len tokens so it fits in context window
+            else:
+                context = x
+            logits = self.forward(context)
             last_token_logits = logits[:,-1,:]/temperature # (batch_size=1, vocab_size) last token in sequence used to generate new token
             if top_k:
                 last_token_logits = self.top_k_sampling(last_token_logits, top_k)
@@ -80,7 +84,7 @@ class VicGPT(nn.Module):
             next_token_id = torch.multinomial(next_token_prob_distribution, num_samples=1) # (batch_size=1, 1)
             # concat next token into the current context
             x = torch.cat([x, next_token_id], dim=-1)
-            num_new_tokens += 1 
+            num_new_tokens += 1
             if eos_token_id is not None and next_token_id.item() == eos_token_id:
                 break
         return x

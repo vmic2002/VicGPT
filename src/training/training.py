@@ -34,7 +34,6 @@ def train(args):
     num_heads = args.num_heads
     mlp_hidden_dim = args.mlp_hidden_dim
     dropout_prob = args.dropout_prob
-
     #################
     # TODO REMOVE
     if sft:
@@ -59,6 +58,7 @@ def train(args):
     """
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     tokenizer.pad_token = tokenizer.eos_token # gpt2 has no pad_token
+    tokenizer.model_max_length = max_seq_len
     print(f"Tokenizer {tokenizer_name} loaded")
     print(f"bos id: {tokenizer.bos_token_id}, eos id:{tokenizer.eos_token_id}, pad: {tokenizer.pad_token_id}")
     ########################################################
@@ -87,13 +87,13 @@ def train(args):
 
     ########################
      
-    ds["train"] = ds["train"].select(range(1)) # TODO FOR TESTING ONLY, comment out
-    ds["validation"] = ds["validation"].select(range(1))# TODO FOR TESTING ONLY, COMMENT OUT
-    MAX_CHARS = 80
-    ds["train"] = ds["train"].map(lambda x: {"text": x["text"][:MAX_CHARS]})
-    ds["validation"] = ds["validation"].map(lambda x: {"text": x["text"][:MAX_CHARS]})
-    print("ds train before tokenization:")
-    print(ds["train"]["text"])
+    ds["train"] = ds["train"].select(range(10000)) # TODO FOR TESTING ONLY, comment out
+    ds["validation"] = ds["validation"].select(range(1000))# TODO FOR TESTING ONLY, COMMENT OUT
+    #MAX_CHARS = 80
+    #ds["train"] = ds["train"].map(lambda x: {"text": x["text"][:MAX_CHARS]})
+    #ds["validation"] = ds["validation"].map(lambda x: {"text": x["text"][:MAX_CHARS]})
+    #print("ds train before tokenization:")
+    #print(ds["train"]["text"])
     
     #######################
     print("Tokenizing entire dataset:")
@@ -291,6 +291,8 @@ def train(args):
             ####################### 
             optimizer.zero_grad() 
             loss.backward()
+            # GRADIENT CLIPPING
+            torch.nn.utils.clip_grad_norm_(vicGPT.parameters(), max_norm=1.0)
             optimizer.step()
             
             epoch_loss += loss.item()
@@ -390,3 +392,5 @@ if __name__ == "__main__":
     args = get_args()
     train(args)
     exit()
+# TODO, ADD COSINE decay LEARNING RATE + WARMUP STEPS
+# TODO FOR PACKING, NEED TO USE STREAMING MAYBE, NOT PUT EVERYTHING INTO RAM
