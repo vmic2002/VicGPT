@@ -190,7 +190,7 @@ def train(args):
 
     print(f"Total parameters: {total_params}")
     print(f"Trainable parameters: {trainable_params}")
-
+    # TODO ADD CHECK FOR CUDA
     device = torch.device("mps") if torch.backends.mps.is_available() else torch.device("cpu")
     vicGPT.to(device)
     optimizer = AdamW(vicGPT.parameters(), lr=lr, weight_decay=weight_decay)

@@ -4,3 +4,4 @@ __pycache__
 wandb
 models/pre_trained
 models/sft
+.DS_Store

@@ -42,7 +42,6 @@ if __name__ == "__main__":
     input_ids = tokenizer.encode(prompt, return_tensors="pt").to(device)
     print(f"\nPrompt: '{prompt}'")
     print(f"Prompt tokens: {input_ids.shape[1]}")
-    print(f"number of input tokens: {len(input_ids[0])}") 
     # Generate
     print("\n" + "="*50)
     print("GENERATING...")
